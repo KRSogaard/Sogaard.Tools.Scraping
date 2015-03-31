@@ -1,0 +1,126 @@
+﻿<Window x:Class="Sogaard.Tools.Scraping.Multithreading.GUI.DownloadManagerGuiWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="MainWindow"  Height="600" Width="605" Loaded="Window_Loaded">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <StackPanel Grid.Row="0">
+            <ProgressBar x:Name="ProgressBar" Height="20" IsIndeterminate="True"/>
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <TextBlock Grid.Column="0">Work threads:</TextBlock>
+                <TextBlock Margin="5,0,5,0" Grid.Column="1" Text="{Binding WorkThreadCount}" />
+
+                <TextBlock Margin="5,0,0,0" Grid.Column="3">Download threads:</TextBlock>
+                <TextBlock Margin="5,0,5,0" Grid.Column="4" Text="{Binding DownloadThreadCount}" />
+            </Grid>
+        </StackPanel>
+        <StackPanel Grid.Row="1">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition />
+                    <ColumnDefinition />
+                    <ColumnDefinition />
+                </Grid.ColumnDefinitions>
+
+                <Grid.RowDefinitions>
+                    <RowDefinition />
+                    <RowDefinition />
+                    <RowDefinition />
+                    <RowDefinition />
+                </Grid.RowDefinitions>
+                
+                <StackPanel Grid.Row="1" Grid.Column="0" Orientation="Horizontal">
+                    <TextBlock>Downloader queue:</TextBlock>
+                    <TextBlock Margin="5,0,0,0" Text="{Binding DownloadJobsInQueue}" />
+                </StackPanel>
+                <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal">
+                    <TextBlock>Download done queue:</TextBlock>
+                    <TextBlock Margin="5,0,0,0" Text="{Binding AwaitingDownDownloadJobs}" />
+                </StackPanel>
+                <StackPanel Grid.Row="1" Grid.Column="2" Orientation="Horizontal">
+                    <TextBlock>Download jobs processing:</TextBlock>
+                    <TextBlock Margin="5,0,0,0" Text="{Binding DownloadJobsCurrentlyProcessing}" />
+                </StackPanel>
+
+                <StackPanel Grid.Row="2" Grid.Column="0" Orientation="Horizontal">
+                    <TextBlock>Worker Queue:</TextBlock>
+                    <TextBlock Margin="5,0,0,0" Text="{Binding WorkJobsInQueue}" />
+                </StackPanel>
+                <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal">
+                    <TextBlock>Jobs Completed:</TextBlock>
+                    <TextBlock Margin="5,0,0,0" Text="{Binding CompletedJobs}" />
+                </StackPanel>
+                <StackPanel Grid.Row="2" Grid.Column="2" Orientation="Horizontal">
+                    <TextBlock Text="{Binding JobsPerSecond}" />
+                    <TextBlock Margin="5,0,0,0">jobs/sec:</TextBlock>
+
+                    <TextBlock Margin="10,0,0,0">Remaining:</TextBlock>
+                    <TextBlock Margin="5,0,0,0" Text="{Binding TimeToComplete}" />                    
+                </StackPanel>
+
+                <StackPanel Grid.Row="3" Grid.Column="0" Orientation="Horizontal">
+                    <TextBlock>Total Proxies:</TextBlock>
+                    <TextBlock Margin="5,0,0,0" Text="{Binding TotalProxyCount}" />
+                </StackPanel>
+                <StackPanel Grid.Row="3" Grid.Column="1" Orientation="Horizontal">
+                    <TextBlock>Current Proxies:</TextBlock>
+                    <TextBlock Margin="5,0,0,0" Text="{Binding CurrentProxyCount}" />
+                </StackPanel>
+                <StackPanel Grid.Row="3" Grid.Column="2" Orientation="Horizontal">
+                    <TextBlock>Time Elapsed:</TextBlock>
+                    <TextBlock Margin="5,0,0,0" Text="{Binding TimeElapsed}" />
+                </StackPanel>
+            </Grid>
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="2">
+            <StackPanel>
+                <Expander  IsExpanded="True" Header="Threads">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+
+                        <ListBox Grid.Column="0" ItemsSource="{Binding WorkThreads}">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding GetDisplayText}" />
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                        <ListBox Grid.Column="1" ItemsSource="{Binding DownloadThreads}">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding GetDisplayText}" />
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Grid>
+                </Expander>
+                <Expander Header="Proxies" IsExpanded="False">
+                    <ListBox ItemsSource="{Binding Proxies}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding GetDisplayText}" />
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Expander>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Window>
