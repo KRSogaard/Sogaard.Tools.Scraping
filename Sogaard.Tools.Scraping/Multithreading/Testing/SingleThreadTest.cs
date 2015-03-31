@@ -11,46 +11,54 @@ namespace Sogaard.Tools.Scraping.Multithreading.Testing
 {
     public class SingleThreadTest
     {
-        public async void TestJob(IThreadedWebClientJob job)
+        public async void TestJob(IThreadedWebClientJob initialJob)
         {
-            using (HttpClient client = new HttpClient(new HttpClientHandler()
-            {
-                AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
-            }))
-            {
-                // Add default headers to the client to simulate 
-                // a real browser
-                ScraperHelper.AddHeadersToClient(client);
+            Stack<IThreadedWebClientJob> queue = new Stack<IThreadedWebClientJob>();
+            queue.Push(initialJob);
 
-                try
+            while (queue.Count > 0)
+            {
+                IThreadedWebClientJob job = queue.Pop();
+
+                using (HttpClient client = new HttpClient(new HttpClientHandler()
                 {
-                    CancellationTokenSource cancelToken = new CancellationTokenSource();
-                    cancelToken.CancelAfter(new TimeSpan(1, 0, 0, 30));
-                    await job.ExecuteDownload(client, cancelToken.Token);
+                    AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
+                }))
+                {
+                    // Add default headers to the client to simulate 
+                    // a real browser
+                    ScraperHelper.AddHeadersToClient(client);
 
-                    List<IThreadedWebClientJob> newJobs;
                     try
                     {
-                        newJobs = job.Execute();
-                        foreach (var t in newJobs)
+                        CancellationTokenSource cancelToken = new CancellationTokenSource();
+                        cancelToken.CancelAfter(new TimeSpan(0, 1, 0, 00));
+                        await job.ExecuteDownload(client, cancelToken.Token);
+
+                        List<IThreadedWebClientJob> newJobs;
+                        try
                         {
-                            TestJob(t);
+                            newJobs = job.Execute();
+                            foreach (var t in newJobs)
+                            {
+                                queue.Push(t);
+                            }
+                        }
+                        catch (Exception exp)
+                        {
+                            job.FailedExecute(exp);
                         }
                     }
+                    // WebException may be a proxy error
+                    catch (WebException exp)
+                    {
+                        throw;
+                    }
+                    // Uncaught error
                     catch (Exception exp)
                     {
-                        job.FailedExecute(exp);
+                        job.FailedDownload(exp);
                     }
-                }
-                // WebException may be a proxy error
-                catch (WebException exp)
-                {
-                    throw;
-                }
-                // Uncaught error
-                catch (Exception exp)
-                {
-                    job.FailedDownload(exp);
                 }
             }
         } 
