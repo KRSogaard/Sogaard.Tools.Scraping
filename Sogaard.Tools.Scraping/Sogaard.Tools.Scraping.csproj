@@ -40,7 +40,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Multithreading\BaseThreadedWebClientJob.cs" />
+    <Compile Include="Multithreading\BaseJobs\BaseThreadedWebClientJob.cs" />
+    <Compile Include="Multithreading\BaseJobs\PostThreadedWebClientJob.cs" />
     <Compile Include="Multithreading\IThreadedWebClientJob.cs" />
     <Compile Include="Multithreading\ThreadedWebClientDownloader.cs" />
     <Compile Include="Multithreading\Testing\SingleThreadTest.cs" />

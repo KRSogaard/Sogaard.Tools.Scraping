@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 namespace Sogaard.Tools.Scraping.Multithreading
 {
+    using Sogaard.Tools.Scraping.Multithreading.TaskTypes;
     using System;
     using System.Collections.Concurrent;
     using System.Collections.Generic;
@@ -273,8 +274,12 @@ namespace Sogaard.Tools.Scraping.Multithreading
 
                     using (HttpClient client = new HttpClient(new HttpClientHandler()
                     {
+                        UseCookies = false,
                         Proxy = webProxy,
                         UseProxy = this.useProxies,
+                        // For Fiddler debugging
+                        //Proxy = new WebProxy("http://127.0.0.1:8888"),
+                        //UseProxy = true,
                         AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
                     }))
                     {
@@ -304,7 +309,14 @@ namespace Sogaard.Tools.Scraping.Multithreading
                             try
                             {
                                 CancellationTokenSource cancelToken = new CancellationTokenSource();
-                                cancelToken.CancelAfter(new TimeSpan(0, 0, 0, 30));
+                                var timelimit = new TimeSpan(0, 0, 30);
+                                // Some jobs might requere a bigger timelimit
+                                if (job is IThreadedWebClientLongJob)
+                                {
+                                    timelimit = ((IThreadedWebClientLongJob)job).GetTimeOut();
+                                }
+
+                                cancelToken.CancelAfter(timelimit);
                                 await job.ExecuteDownload(client, cancelToken.Token);
 
                                 doneJobQueue.Enqueue(job);

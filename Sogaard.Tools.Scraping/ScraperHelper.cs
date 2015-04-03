@@ -80,5 +80,10 @@ namespace Sogaard.Tools.Scraping
                 Console.WriteLine("No good proxies left, have to terminate!");
             };
         }
+
+        public static List<IThreadedWebClientJob> Return(this IThreadedWebClientJob self, IThreadedWebClientJob job)
+        {
+            return new List<IThreadedWebClientJob>(){ job };
+        } 
     }
 }
