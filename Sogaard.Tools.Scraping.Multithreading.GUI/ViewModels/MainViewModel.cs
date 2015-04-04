@@ -18,7 +18,6 @@ namespace Sogaard.Scraper.HoursGuid.GUI.ViewModels
         private int downloadJobsInQueue;
         private int awaitingDownDownloadJobs;
         private int downloadJobsCurrentlyProcessing;
-        private int workJobsInQueue;
         private int completedJobs;
         private int totalProxyCount;
         private int currentProxyCount;
@@ -82,17 +81,6 @@ namespace Sogaard.Scraper.HoursGuid.GUI.ViewModels
                 OnPropertyChanged("TimeToComplete");
             }
         }
-        public int WorkJobsInQueue
-        {
-            get { return workJobsInQueue; }
-            set
-            {
-                workJobsInQueue = value;
-                OnPropertyChanged();
-                OnPropertyChanged("TimeElapsed");
-                OnPropertyChanged("TimeToComplete");
-            }
-        }
         public int CompletedJobs
         {
             get { return completedJobs; }
@@ -136,7 +124,7 @@ namespace Sogaard.Scraper.HoursGuid.GUI.ViewModels
         {
             get
             {
-                var secs = ((double)this.DownloadJobsInQueue + (double)this.awaitingDownDownloadJobs + (double)this.WorkJobsInQueue) / (completedJobs / (DateTime.Now - Started).TotalSeconds);
+                var secs = ((double)this.DownloadJobsInQueue + (double)this.awaitingDownDownloadJobs / (completedJobs / (DateTime.Now - Started).TotalSeconds));
                 var span = new TimeSpan(0, 0, (int)secs);
                 string output = " ";
                 if(span.Hours > 1){

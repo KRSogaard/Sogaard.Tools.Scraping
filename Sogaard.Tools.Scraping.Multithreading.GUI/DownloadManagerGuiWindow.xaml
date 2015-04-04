@@ -56,17 +56,14 @@
                 </StackPanel>
 
                 <StackPanel Grid.Row="2" Grid.Column="0" Orientation="Horizontal">
-                    <TextBlock>Worker Queue:</TextBlock>
-                    <TextBlock Margin="5,0,0,0" Text="{Binding WorkJobsInQueue}" />
-                </StackPanel>
-                <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal">
                     <TextBlock>Jobs Completed:</TextBlock>
                     <TextBlock Margin="5,0,0,0" Text="{Binding CompletedJobs}" />
                 </StackPanel>
-                <StackPanel Grid.Row="2" Grid.Column="2" Orientation="Horizontal">
+                <StackPanel Grid.Row="2" Grid.Column="1" Orientation="Horizontal">
                     <TextBlock Text="{Binding JobsPerSecond}" />
                     <TextBlock Margin="5,0,0,0">jobs/sec:</TextBlock>
-
+                </StackPanel>
+                <StackPanel Grid.Row="2" Grid.Column="2" Orientation="Horizontal">
                     <TextBlock Margin="10,0,0,0">Remaining:</TextBlock>
                     <TextBlock Margin="5,0,0,0" Text="{Binding TimeToComplete}" />                    
                 </StackPanel>

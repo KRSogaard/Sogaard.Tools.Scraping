@@ -83,7 +83,11 @@ namespace Sogaard.Tools.Scraping
 
         public static List<IThreadedWebClientJob> Return(this IThreadedWebClientJob self, IThreadedWebClientJob job)
         {
-            return new List<IThreadedWebClientJob>(){ job };
+            return new List<IThreadedWebClientJob>() { job };
+        }
+        public static List<IThreadedWebClientJob> ReturnNothing(this IThreadedWebClientJob self)
+        {
+            return new List<IThreadedWebClientJob>();
         } 
     }
 }

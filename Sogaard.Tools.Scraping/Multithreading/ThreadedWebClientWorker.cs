@@ -20,17 +20,9 @@ namespace Sogaard.Tools.Scraping.Multithreading
     public class ThreadedWebClientWorker
     {
         /// <summary>
-        /// Jobs yet to be done. FIFO
-        /// </summary>
-        private ConcurrentQueue<IThreadedWebClientJob> JobsQueue { get; set; }
-        /// <summary>
         /// Use the stack instead of queue if this is true
         /// </summary>
         private bool useDepthFirst { get; set; }
-        /// <summary>
-        /// Jobs yet to be done. FILO
-        /// </summary>
-        private ConcurrentStack<IThreadedWebClientJob> JobsQueueStack { get; set; }
 
         /// <summary>
         /// Array of woker threads
@@ -67,7 +59,6 @@ namespace Sogaard.Tools.Scraping.Multithreading
         public event ThreadWorkStatusChangedEvent WorkerThreadStatusChanged;
         public event JobDoneEvent WorkerThreadJobDone;
         public event ErrorEvent WorkerThreadError;
-        public event JobInQueueEvent WorkerJobInQueueChanged;
         public event WorkDoneEvent WorkDone;
 
         public event DownloaderThreadJobChangedEvent DownloaderThreadJobChanged;
@@ -97,15 +88,6 @@ namespace Sogaard.Tools.Scraping.Multithreading
             this.BadJobsRetry = 4;
             this.BadProxyRetry = 2;
             this.useDepthFirst = depthFirst;
-            
-            if (this.useDepthFirst)
-            {
-                this.JobsQueueStack = new ConcurrentStack<IThreadedWebClientJob>();
-            }
-            else
-            {
-                this.JobsQueue = new ConcurrentQueue<IThreadedWebClientJob>();
-            }
         }
 
         public void SetThreads(int workThreads, int downloadThreads)
@@ -129,7 +111,7 @@ namespace Sogaard.Tools.Scraping.Multithreading
         }
         public void AddJob(IThreadedWebClientJob Job)
         {
-            Enqueue(Job);
+            this.client.AddJob(Job);
         }
 
         /// <summary>
@@ -211,74 +193,64 @@ namespace Sogaard.Tools.Scraping.Multithreading
             {
                 try
                 {
-                    // If there are any jobs in our queue add them to the
-                    // downloader.
-                    IThreadedWebClientJob _job = this.DequeueJob();
-                    if (_job != null)
+                    // Dequeue a job form the download
+                    var job = this.client.GetJob();
+                    // If there are no jobs avalible, and the download have no more jobs,
+                    // and that there are no worker jobs, set the threads work status to
+                    // no work.
+                    if (job == null && this.client.JobsInQueue() == 0)
                     {
-                        this.client.AddJob(_job);
+                        this.ThreadsDone[threadIndex] = true;
+                        if (this.WorkerThreadStatusChanged != null)
+                            this.WorkerThreadStatusChanged(this, threadIndex, null);
+
+                        Thread.Sleep(100);
+                        continue;
                     }
-                    else
+
+                    // We did not get a job, but there are jobs in the worker or downloader
+                    // queue
+                    if (job == null)
                     {
-                        // Dequeue a job form the download
-                        var job = this.client.GetJob();
-                        // If there are no jobs avalible, and the download have no more jobs,
-                        // and that there are no worker jobs, set the threads work status to
-                        // no work.
-                        if (job == null && this.client.JobsInQueue() == 0 && this.GetQueueCount() == 0)
+                        // No job ready, but there are jobs waiting to be completed
+                        Thread.Sleep(100);
+                        continue;
+                    }
+
+                    // If we get to here, have we gotten a job to do
+                    if (job != null)
+                    {
+                        // If we had set the worker as having no work, will we need to updated
+                        // it, to ensure that they wont shut down.
+                        if (this.ThreadsDone[threadIndex])
                         {
-                            this.ThreadsDone[threadIndex] = true;
                             if (this.WorkerThreadStatusChanged != null)
-                                this.WorkerThreadStatusChanged(this, threadIndex, null);
-
-                            Thread.Sleep(100);
-                            continue;
+                                this.WorkerThreadStatusChanged(this, threadIndex, job);
+                            this.ThreadsDone[threadIndex] = false;
                         }
 
-                        // We did not get a job, but there are jobs in the worker or downloader
-                        // queue
-                        if (job == null)
+                        try
                         {
-                            // No job ready, but there are jobs waiting to be completed
-                            Thread.Sleep(100);
-                            continue;
+                            if (this.WorkerThreadJobDone != null)
+                            {
+                                this.WorkerThreadJobDone(this, threadIndex, job);
+                            }
+
+                            // Execute the job and add the list new jobs to the queue
+                            var newJobs = job.Execute();
+                            for(int i = 0; i < newJobs.Count; i++)
+                            {
+                                this.client.AddJob(newJobs[i]);
+                            }
                         }
-
-                        // If we get to here, have we gotten a job to do
-                        if (job != null)
+                        catch (Exception exp)
                         {
-                            // If we had set the worker as having no work, will we need to updated
-                            // it, to ensure that they wont shut down.
-                            if (this.ThreadsDone[threadIndex])
+                            // There where an uncaught error in the job
+                            // inform the job and do not requeue it.
+                            job.FailedExecute(exp);
+                            if (WorkerThreadError != null)
                             {
-                                if (this.WorkerThreadStatusChanged != null)
-                                    this.WorkerThreadStatusChanged(this, threadIndex, job);
-                                this.ThreadsDone[threadIndex] = false;
-                            }
-
-                            try
-                            {
-                                // Execute the job and add the list new jobs to the queue
-                                var newJobs = job.Execute();
-                                foreach (var newJob in newJobs)
-                                {
-                                    this.Enqueue(newJob);
-                                }
-
-                                if (this.WorkerThreadJobDone != null)
-                                {
-                                    this.WorkerThreadJobDone(this, threadIndex, job);
-                                }
-                            }
-                            catch (Exception exp)
-                            {
-                                // There where an uncaught error in the job
-                                // inform the job and do not requeue it.
-                                job.FailedExecute(exp);
-                                if (WorkerThreadError != null)
-                                {
-                                    this.WorkerThreadError(this, threadIndex, job, exp);
-                                }
+                                this.WorkerThreadError(this, threadIndex, job, exp);
                             }
                         }
                     }
@@ -288,57 +260,6 @@ namespace Sogaard.Tools.Scraping.Multithreading
                     Console.WriteLine("Worker Thread error: " + exp.Message);
                 }
             }
-        }
-
-        private IThreadedWebClientJob DequeueJob()
-        {
-            IThreadedWebClientJob job;
-            if (this.useDepthFirst)
-            {
-                if (this.JobsQueueStack.TryPop(out job))
-                {
-                    if (this.WorkerJobInQueueChanged != null)
-                    {
-                        this.WorkerJobInQueueChanged(this, this.useDepthFirst ? this.JobsQueueStack.Count : this.JobsQueue.Count);
-                    }
-                    return job;
-                }
-                return null;
-            }
-            if (this.JobsQueue.TryDequeue(out job))
-            {
-                if (this.WorkerJobInQueueChanged != null)
-                {
-                    this.WorkerJobInQueueChanged(this, this.useDepthFirst ? this.JobsQueueStack.Count : this.JobsQueue.Count);
-                }
-                return job;
-            }
-            return null;
-        }
-
-        private void Enqueue(IThreadedWebClientJob job)
-        {
-            if (this.useDepthFirst)
-            {
-                this.JobsQueueStack.Push(job);
-            }
-            else
-            {
-                this.JobsQueue.Enqueue(job);
-            }
-            if (this.WorkerJobInQueueChanged != null)
-            {
-                this.WorkerJobInQueueChanged(this, this.useDepthFirst ? this.JobsQueueStack.Count : this.JobsQueue.Count);
-            }
-        }
-
-        private int GetQueueCount()
-        {
-            if (this.useDepthFirst)
-            {
-                return this.JobsQueueStack.Count;
-            }
-            return this.JobsQueue.Count;
         }
 
         public void Pause()
@@ -424,10 +345,6 @@ namespace Sogaard.Tools.Scraping.Multithreading
 
         public void ClearJobs()
         {
-            if (this.JobsQueueStack != null)
-                this.JobsQueueStack.Clear();
-            if(this.JobsQueue != null)
-                this.JobsQueue = new ConcurrentQueue<IThreadedWebClientJob>();
             if(this.client != null)
                 this.client.ClearJobs();
         }

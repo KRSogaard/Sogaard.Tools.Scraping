@@ -85,7 +85,6 @@ namespace Sogaard.Tools.Scraping.Multithreading.GUI
             worker.DownloaderJobDoneInQueueChanged += OnDownloaderJobDoneInQueueChanged;
             worker.DownloaderJobInQueueChanged += OnDownloaderJobInQueueChanged;
             worker.DownloaderJobProcessingChanged += OnDownloaderJobProcessingChanged;
-            worker.WorkerJobInQueueChanged += OnWorkerJobInQueueChanged;
             worker.DownloaderBadProxyRemoved += OnDownloaderBadProxyRemoved;
         }
 
@@ -109,10 +108,6 @@ namespace Sogaard.Tools.Scraping.Multithreading.GUI
             {
                 SetWorkerThreadStatus(threadId, "Running: " + job);
             }
-        }
-        private void OnWorkerJobInQueueChanged(object sender, int jobs)
-        {
-            this.SetWorkerJobsInQueue(jobs);
         }
 
         private void OnDownloaderJobProcessingChanged(object sender, int currentProcessing)
@@ -152,18 +147,6 @@ namespace Sogaard.Tools.Scraping.Multithreading.GUI
             this.SetRemovedProxy(proxy);
         }
 
-        private void SetWorkerJobsInQueue(int value)
-        {
-            if (this.Dispatcher.CheckAccess())
-            {
-                this.viewModel.WorkJobsInQueue = value;
-            }
-            else
-            {
-                SetIntCallback d = new SetIntCallback(SetWorkerJobsInQueue);
-                this.Dispatcher.Invoke(d, new object[] { value });
-            }
-        }
         private void SetDownloaderJobProcessing(int value)
         {
             if (this.Dispatcher.CheckAccess())
