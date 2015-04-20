@@ -41,6 +41,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Multithreading\BaseJobs\BaseThreadedWebClientJob.cs" />
+    <Compile Include="Multithreading\BaseJobs\ExecuteOnlyJob.cs" />
     <Compile Include="Multithreading\BaseJobs\PostThreadedWebClientJob.cs" />
     <Compile Include="Multithreading\IThreadedWebClientJob.cs" />
     <Compile Include="Multithreading\TaskTypes\IThreadedWebClientLongJob.cs" />
