@@ -14,6 +14,7 @@ namespace Sogaard.Tools.Scraping.Multithreading.BaseJobs
         private HttpResponseHeaders responseHeaders;
         private Dictionary<string,string> headers;
         private List<KeyValuePair<string, string>> formData;
+        private string formString;
         
         public void AddHeader(string key, string value)
         {
@@ -48,7 +49,11 @@ namespace Sogaard.Tools.Scraping.Multithreading.BaseJobs
             }
         }
 
-
+        public void SetForm(string value)
+        {
+            this.formString = value;
+        }
+        
         public override async Task ExecuteDownload(HttpClient client, CancellationToken cancelToken)
         {
             var uri = new Uri(this.GetUrl());
@@ -68,7 +73,29 @@ namespace Sogaard.Tools.Scraping.Multithreading.BaseJobs
             {
                 keyValue.AddRange(this.formData);
             }
-            message.Content = new MyFormUrlEncodedContent(keyValue);
+            if (this.formString != null)
+            {
+                message.Content = new StringContent(this.formString, Encoding.UTF8, "application/json");
+            }
+            else
+            {
+
+                StringBuilder stringBuilder = new StringBuilder();
+                foreach (KeyValuePair<string, string> current in keyValue)
+                {
+                    if (stringBuilder.Length > 0)
+                    {
+                        stringBuilder.Append('&');
+                    }
+
+                    stringBuilder.Append(Encode(current.Key));
+                    stringBuilder.Append('=');
+                    stringBuilder.Append(Encode(current.Value));
+                }
+
+                message.Content = new StringContent(stringBuilder.ToString(), Encoding.UTF8, "application/x-www-form-urlencoded");
+                //message.Content = new MyFormUrlEncodedContent(keyValue);
+            }
 
             var result = await client.SendAsync(message, cancelToken).ConfigureAwait(false);
 
@@ -87,6 +114,15 @@ namespace Sogaard.Tools.Scraping.Multithreading.BaseJobs
                 throw new HttpRequestException("HTML returned was not verified.");
             }
         }
+
+        private static string Encode(string data)
+        {
+            if (string.IsNullOrEmpty(data))
+            {
+                return string.Empty;
+            }
+            return System.Net.WebUtility.UrlEncode(data).Replace("%20", "+");
+        }
         
         public class MyFormUrlEncodedContent : ByteArrayContent
         {
@@ -95,6 +131,7 @@ namespace Sogaard.Tools.Scraping.Multithreading.BaseJobs
             {
                 base.Headers.ContentType = new MediaTypeHeaderValue("application/x-www-form-urlencoded");
             }
+
             private static byte[] GetContentByteArray(IEnumerable<KeyValuePair<string, string>> nameValueCollection)
             {
                 if (nameValueCollection == null)
