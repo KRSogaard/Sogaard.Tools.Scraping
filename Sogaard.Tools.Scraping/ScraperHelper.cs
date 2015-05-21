@@ -22,6 +22,10 @@ namespace Sogaard.Tools.Scraping
         public static void SetOrigenToClient(string url, HttpClient client)
         {
             var hostname = new Uri(url).Host;
+            if (client.DefaultRequestHeaders.Contains("Host"))
+            {
+                client.DefaultRequestHeaders.Remove("Host");
+            }
             client.DefaultRequestHeaders.Add("Host", hostname);
         }
 
@@ -88,6 +92,6 @@ namespace Sogaard.Tools.Scraping
         public static List<IThreadedWebClientJob> ReturnNothing(this IThreadedWebClientJob self)
         {
             return new List<IThreadedWebClientJob>();
-        } 
+        }
     }
 }
