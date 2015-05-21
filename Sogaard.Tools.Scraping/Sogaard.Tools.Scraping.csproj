@@ -45,6 +45,8 @@
     <Compile Include="Multithreading\BaseJobs\PostThreadedWebClientJob.cs" />
     <Compile Include="Multithreading\IThreadedWebClientJob.cs" />
     <Compile Include="Multithreading\TaskTypes\IThreadedWebClientLongJob.cs" />
+    <Compile Include="Multithreading\TaskTypes\ITypedTask.cs" />
+    <Compile Include="Multithreading\TaskTypes\SpanTask.cs" />
     <Compile Include="Multithreading\ThreadedWebClientDownloader.cs" />
     <Compile Include="Multithreading\Testing\SingleThreadTest.cs" />
     <Compile Include="Multithreading\ThreadedWebClientWorker.cs" />
