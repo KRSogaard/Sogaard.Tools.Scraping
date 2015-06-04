@@ -1,5 +1,6 @@
 ﻿namespace Sogaard.Tools.Scraping
 {
+    using System;
     using System.Collections.Generic;
     using System.Text.RegularExpressions;
 
