@@ -275,11 +275,11 @@ namespace Sogaard.Tools.Scraping.Multithreading
                     using (HttpClient client = new HttpClient(new HttpClientHandler()
                     {
                         UseCookies = false,
-                        Proxy = webProxy,
-                        UseProxy = this.useProxies,
+                        //Proxy = webProxy,
+                        //UseProxy = this.useProxies,
                         // For Fiddler debugging
-                        //Proxy = new WebProxy("http://127.0.0.1:8888"),
-                        //UseProxy = true,
+                        Proxy = new WebProxy("http://127.0.0.1:8888"),
+                        UseProxy = true,
                         AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
                     }))
                     {
@@ -305,33 +305,47 @@ namespace Sogaard.Tools.Scraping.Multithreading
                                 this.DownloaderThreadJobChanged(this, threadIndex, job);
                             }
 
-
                             try
                             {
-                                CancellationTokenSource cancelToken = new CancellationTokenSource();
-                                var timelimit = new TimeSpan(0, 0, 30);
-                                // Some jobs might requere a bigger timelimit
-                                if (job is IThreadedWebClientLongJob)
+                                bool run = true;
+                                if (job is ITypedTask)
                                 {
-                                    timelimit = ((IThreadedWebClientLongJob)job).GetTimeOut();
+                                    run = ((ITypedTask)job).Verify();
                                 }
 
-                                cancelToken.CancelAfter(timelimit);
-                                await job.ExecuteDownload(client, cancelToken.Token);
-
-                                doneJobQueue.Enqueue(job);
-                                if (this.JobDoneInQueueChanged != null)
+                                if (run)
                                 {
-                                    this.JobDoneInQueueChanged(this, this.doneJobQueue.Count);
-                                }
-
-                                // Vote up good proxy, if have bad votes
-                                if (proxy != null && this.badProxy.ContainsKey(proxy))
-                                {
-                                    if (this.badProxy[proxy] > 0)
+                                    CancellationTokenSource cancelToken = new CancellationTokenSource();
+                                    var timelimit = new TimeSpan(0, 0, 30);
+                                    // Some jobs might requere a bigger timelimit
+                                    if (job is IThreadedWebClientLongJob)
                                     {
-                                        this.badProxy[proxy]--;
+                                        timelimit = ((IThreadedWebClientLongJob)job).GetTimeOut();
                                     }
+
+                                    cancelToken.CancelAfter(timelimit);
+                                    await job.ExecuteDownload(client, cancelToken.Token);
+
+                                    doneJobQueue.Enqueue(job);
+                                    if (this.JobDoneInQueueChanged != null)
+                                    {
+                                        this.JobDoneInQueueChanged(this, this.doneJobQueue.Count);
+                                    }
+
+                                    // Vote up good proxy, if have bad votes
+                                    if (proxy != null && this.badProxy.ContainsKey(proxy))
+                                    {
+                                        if (this.badProxy[proxy] > 0)
+                                        {
+                                            this.badProxy[proxy]--;
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    // Requery the job
+                                    this.Enqueue(job);
+                                    Thread.Sleep(10);
                                 }
                             }
                                 // WebException may be a proxy error

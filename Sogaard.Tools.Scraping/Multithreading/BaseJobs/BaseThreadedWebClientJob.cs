@@ -53,7 +53,7 @@ namespace Sogaard.Tools.Scraping.Multithreading.BaseJobs
             }
             else
             {
-                throw new HttpRequestException("HTML returned was not verified.");
+                throw new HttpRequestException("HTML request was not successfull.");
             }
 
         }
