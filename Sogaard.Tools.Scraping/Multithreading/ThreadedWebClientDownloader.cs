@@ -370,7 +370,7 @@ namespace Sogaard.Tools.Scraping.Multithreading
                             // WebException may be a proxy error
                             catch (HttpRequestException exp)
                             {
-                                logger.Debug(exp, "Got web exception while executing downloader {0}'s job {1}.", threadIndex, job);
+                                logger.Warn(exp, "Got web exception while executing downloader {0}'s job {1}.", threadIndex, job);
                                 // Handle bad proxy voting
                                 this.HandleBadProxy(threadIndex, proxy);
                                 // Requeue the job
@@ -382,7 +382,7 @@ namespace Sogaard.Tools.Scraping.Multithreading
                                 logger.Error(exp, "Got unknown exception while executing downloader {0}'s job {1}.", threadIndex, job);
                                 try
                                 {
-                                    logger.Trace("Downloader {0} is running failed download for job {1}", threadIndex, job);
+                                    logger.Trace(exp, "Downloader {0} is running failed download for job {1}: {2}", threadIndex, job, exp.Message);
                                     job.FailedDownload(exp);
                                 }
                                 catch (Exception exp2)

@@ -15,6 +15,7 @@ namespace Sogaard.Tools.Scraping
         protected HolderBase(int maxQueue)
         {
             this.maxQueue = maxQueue;
+            queue = new ConcurrentQueue<T>();
         } 
 
         public void Add(T obj)

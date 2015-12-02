@@ -30,7 +30,6 @@ namespace Sogaard.Tools.Scraping.Multithreading.BaseJobs
         }
         
         public abstract List<IThreadedWebClientJob> Execute();
-        public abstract void FailedExecute(Exception exp);
 
         public virtual async Task ExecuteDownload(HttpClient client, CancellationToken cancelToken)
         {
@@ -58,12 +57,22 @@ namespace Sogaard.Tools.Scraping.Multithreading.BaseJobs
 
         }
 
-        public abstract void FailedDownload(Exception exp);
+        public virtual void FailedDownload(Exception exp)
+        {
+        }
+
+        public virtual void FailedExecute(Exception exp)
+        {
+
+        }
 
         protected virtual bool CanDownload()
         {
             return true;
         }
-        protected abstract bool ValidateHtml(string html);
+        protected virtual bool ValidateHtml(string html)
+        {
+            return true;
+        }
     }
 }
