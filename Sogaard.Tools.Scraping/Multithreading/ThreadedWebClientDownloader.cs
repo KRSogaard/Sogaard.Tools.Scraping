@@ -3,6 +3,7 @@ using System.Net.Http;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using NLog;
 
 namespace Sogaard.Tools.Scraping.Multithreading
 {
@@ -12,7 +13,7 @@ namespace Sogaard.Tools.Scraping.Multithreading
     using System.Collections.Generic;
     using System.Net;
     using System.Threading;
-
+    
     public delegate void DownloaderThreadJobChangedEvent(object sender, int threadId, IThreadedWebClientJob job);
     public delegate void DownloaderThreadStatusEvent(object sender, int threadId, bool status);
     public delegate void DownloaderNoGoodProxyLeftEvent(object sender);
@@ -27,6 +28,8 @@ namespace Sogaard.Tools.Scraping.Multithreading
     /// </summary>
     public class ThreadedWebClientDownloader
     {
+        private static Logger logger = LogManager.GetCurrentClassLogger();
+
         /// <summary>
         /// Jobs to be executed. FIFO
         /// </summary>
@@ -139,16 +142,20 @@ namespace Sogaard.Tools.Scraping.Multithreading
                 this.JobsQueueStack = new ConcurrentStack<IThreadedWebClientJob>();
             else
                 this.jobsQueue = new ConcurrentQueue<IThreadedWebClientJob>();
+
+            logger.Debug("ThreadedWebClientDownloader:\n    useDepthFirst: {0}\n    votesToRemoveProxy: {1}\n    badJobRetry: {2}\n    maxDoneQueue: {3}\n    waitingForEmpty: {4}", useDepthFirst, votesToRemoveProxy, badJobRetry, maxDoneQueue, waitingForEmpty);
         }
 
         public void SetThreads(int numberOfThreads)
         {
+            logger.Trace("Download threads have been set to {0}", numberOfThreads);
             this.numberOfThreads = numberOfThreads;
         }
 
-        public void SetRetrys(int badJobRetry, int badProxyVode)
+        public void SetRetrys(int badJobRetry, int badProxyVote)
         {
-            this.votesToRemoveProxy = badProxyVode;
+            logger.Trace("Retrys have been set to Proxy: {0}, Job: {1}", badProxyVote, badJobRetry);
+            this.votesToRemoveProxy = badProxyVote;
             this.badJobRetry = badJobRetry;
         }
 
@@ -158,6 +165,7 @@ namespace Sogaard.Tools.Scraping.Multithreading
         /// </summary>
         public void Start()
         {
+            logger.Debug("Starting {0} download threads.", this.numberOfThreads);
             // Rests flags
             this.badJobs = new ConcurrentDictionary<IThreadedWebClientJob, int>();
             this.NoGoodProxyEventFired = false;
@@ -177,6 +185,7 @@ namespace Sogaard.Tools.Scraping.Multithreading
         /// </summary>
         public void Stop()
         {
+            logger.Debug("Stopping all download threads.");
             this.stopThread = true;
         }
 
@@ -188,6 +197,7 @@ namespace Sogaard.Tools.Scraping.Multithreading
         {
             foreach (var p in proxies)
             {
+                logger.Trace("Got new proxy {0}", p);
                 this.proxies.Enqueue(p);
             }
             this.useProxies = this.proxies.Count > 0;
@@ -198,6 +208,7 @@ namespace Sogaard.Tools.Scraping.Multithreading
         /// </summary>
         public void AddJob(IThreadedWebClientJob job)
         {
+            logger.Trace("Adding download job {0}", job);
             this.Enqueue(job);
         }
 
@@ -231,12 +242,12 @@ namespace Sogaard.Tools.Scraping.Multithreading
         private async void RunWebDownload(object threadIndexObject)
         {
             int threadIndex = (int) threadIndexObject;
-            Console.WriteLine("Download Thread " + threadIndex + " started");
+            logger.Trace("Download Thread {0} started", threadIndex);
             
             DateTime currentTaskStarted;
             Task currentTask;
 
-                // Run untill asked to shut down
+            // Run untill asked to shut down
             while (!this.stopThread)
             {
                 if (this.DownloaderThreadStatus != null)
@@ -271,15 +282,14 @@ namespace Sogaard.Tools.Scraping.Multithreading
                 try
                 {
                     WebProxy webProxy = this.HandleAddProxy(out proxy);
-
                     using (HttpClient client = new HttpClient(new HttpClientHandler()
                     {
                         UseCookies = false,
-                        //Proxy = webProxy,
-                        //UseProxy = this.useProxies,
+                        Proxy = webProxy,
+                        UseProxy = this.useProxies,
                         // For Fiddler debugging
-                        Proxy = new WebProxy("http://127.0.0.1:8888"),
-                        UseProxy = true,
+                        //Proxy = new WebProxy("http://127.0.0.1:8888"),
+                        //UseProxy = true,
                         AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
                     }))
                     {
@@ -291,6 +301,7 @@ namespace Sogaard.Tools.Scraping.Multithreading
                         IThreadedWebClientJob job = this.Dequeue();
                         if (job != null)
                         {
+                            logger.Trace("Downloader {0} got a new job {1}", threadIndex, job);
                             lock (this.jobsInProcessLocker)
                             {
                                 this.jobsInProcess++;
@@ -310,21 +321,27 @@ namespace Sogaard.Tools.Scraping.Multithreading
                                 bool run = true;
                                 if (job is ITypedTask)
                                 {
+                                    logger.Trace("Downloader {0}'s job {1} requires verification.", threadIndex, job);
                                     run = ((ITypedTask)job).Verify();
                                 }
 
                                 if (run)
                                 {
+                                    logger.Trace("Downloader {0} is running job {1}.", threadIndex, job);
                                     CancellationTokenSource cancelToken = new CancellationTokenSource();
                                     var timelimit = new TimeSpan(0, 0, 30);
                                     // Some jobs might requere a bigger timelimit
                                     if (job is IThreadedWebClientLongJob)
                                     {
+                                        logger.Debug("Fetching timelimit for downloader {0}'s job {1}.", threadIndex, job);
                                         timelimit = ((IThreadedWebClientLongJob)job).GetTimeOut();
+                                        logger.Debug("Downloader {0}'s job {1} have set a custome time limit to {2}.", threadIndex, job, timelimit);
                                     }
 
                                     cancelToken.CancelAfter(timelimit);
+                                    logger.Trace("Downloader {0} is executing job {1}.", threadIndex, job);
                                     await job.ExecuteDownload(client, cancelToken.Token);
+                                    logger.Trace("Downloader {0} is done executing job {1}.", threadIndex, job);
 
                                     doneJobQueue.Enqueue(job);
                                     if (this.JobDoneInQueueChanged != null)
@@ -335,6 +352,7 @@ namespace Sogaard.Tools.Scraping.Multithreading
                                     // Vote up good proxy, if have bad votes
                                     if (proxy != null && this.badProxy.ContainsKey(proxy))
                                     {
+                                        logger.Trace("Proxy {0} was good, up voting it.", proxy);
                                         if (this.badProxy[proxy] > 0)
                                         {
                                             this.badProxy[proxy]--;
@@ -343,24 +361,28 @@ namespace Sogaard.Tools.Scraping.Multithreading
                                 }
                                 else
                                 {
+                                    logger.Trace("Downloader {0}'s job {1} did not verify, reenqueueing the job.", threadIndex, job);
                                     // Requery the job
                                     this.Enqueue(job);
                                     Thread.Sleep(10);
                                 }
                             }
-                                // WebException may be a proxy error
+                            // WebException may be a proxy error
                             catch (HttpRequestException exp)
                             {
+                                logger.Debug(exp, "Got web exception while executing downloader {0}'s job {1}.", threadIndex, job);
                                 // Handle bad proxy voting
                                 this.HandleBadProxy(threadIndex, proxy);
                                 // Requeue the job
                                 this.HandleBadJob(job, threadIndex);
                             }
-                                // Uncaught error
+                            // Uncaught error
                             catch (Exception exp)
                             {
+                                logger.Error(exp, "Got unknown exception while executing downloader {0}'s job {1}.", threadIndex, job);
                                 try
                                 {
+                                    logger.Trace("Downloader {0} is running failed download for job {1}", threadIndex, job);
                                     job.FailedDownload(exp);
                                 }
                                 catch (Exception exp2)
@@ -416,10 +438,12 @@ namespace Sogaard.Tools.Scraping.Multithreading
 
             if (this.badJobs[job] < this.badJobRetry)
             {
+                logger.Debug("Downloader {0} is adding job {1} back to the queue. {2} of {3} retires left", threadIndex, job, this.badJobs[job], this.badJobRetry - 1);
                 this.Enqueue(job);
             }
             else
             {
+                logger.Debug("Downloader {0}'s job {1} is out of retys.", threadIndex, job);
                 // The jobs have failed multible times, inform and clean up
                 int tryInt;
                 this.badJobs.TryRemove(job, out tryInt);
@@ -445,9 +469,13 @@ namespace Sogaard.Tools.Scraping.Multithreading
             if (this.proxies.Count == 0)
             {
                 if (this.NoGoodProxyEventFired)
+                {
+                    logger.Debug("No good proxies already fired, shutting down thread with exception.");
                     throw new WebException("No Good Proxies");
+                }
 
                 // Bad no good proxies left
+                logger.Debug("No good proxies found, and it is the first time.");
                 this.NoGoodProxyEventFired = true;
                 this.stopThread = true;
                 if (this.DownloaderNoGoodProxyLeft != null)
@@ -456,12 +484,15 @@ namespace Sogaard.Tools.Scraping.Multithreading
                 }
                 throw new WebException("No Good Proxies");
             }
+
             WebProxy p = null;
             if (this.proxies.TryDequeue(out proxy))
             {
+                logger.Trace("Found proxy {0}.", proxy);
                 this.proxies.Enqueue(proxy);
                 return new WebProxy(proxy.Ip, proxy.Port);
             }
+            logger.Error("Was unable to dequeue a proxy.");
             throw new WebException("No Good Proxies");
         }
 
@@ -475,17 +506,21 @@ namespace Sogaard.Tools.Scraping.Multithreading
             // to be removed.
             if (proxy != null && this.useProxies)
             {
+                logger.Trace("Down voting the proxy {}." , proxy);
                 if (!this.badProxy.ContainsKey(proxy))
                 {
+                    logger.Trace("First time down voting proxy {}.", proxy);
                     this.badProxy.GetOrAdd(proxy, 1);
                 }
                 else
                 {
                     this.badProxy[proxy]++;
+                    logger.Trace("Proxy {} have failied {} times now.", proxy, this.badProxy[proxy]);
                 }
 
                 if (this.badProxy[proxy] >= this.votesToRemoveProxy)
                 {
+                    logger.Trace("Proxy {} have failied {} or more times, removing it.", proxy, this.votesToRemoveProxy);
                     if (this.DownloaderBadProxyRemoved != null)
                     {
                         this.DownloaderBadProxyRemoved(this, threadIndex, proxy);
@@ -494,6 +529,7 @@ namespace Sogaard.Tools.Scraping.Multithreading
                     // the bad proxie
                     WebProxyHolder current = null;
                     // To ensure the proxie have not been removed and we start a never ending loop
+                    logger.Trace("Ensuring proxy {} have been removed from the queue.", proxy);
                     int i = this.proxies.Count; 
                     while (current != proxy && i >= 0)
                     {

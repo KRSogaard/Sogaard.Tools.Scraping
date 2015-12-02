@@ -17,5 +17,14 @@ namespace Sogaard.Tools.Scraping.Multithreading
         /// Proxy County, can be used for filtering
         /// </summary>
         public string Country { get; set; }
+
+        public override string ToString()
+        {
+            if (!string.IsNullOrWhiteSpace(Country))
+            {
+                return Ip + ":" + Port + " " + Country;
+            }
+            return Ip + ":" + Port;
+        }
     }
 }

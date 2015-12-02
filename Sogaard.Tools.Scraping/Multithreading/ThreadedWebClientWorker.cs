@@ -1,3 +1,5 @@
+using NLog;
+
 namespace Sogaard.Tools.Scraping.Multithreading
 {
     using System;
@@ -19,6 +21,8 @@ namespace Sogaard.Tools.Scraping.Multithreading
     /// </summary>
     public class ThreadedWebClientWorker
     {
+        private static Logger logger = LogManager.GetCurrentClassLogger();
+
         /// <summary>
         /// Use the stack instead of queue if this is true
         /// </summary>
@@ -84,6 +88,7 @@ namespace Sogaard.Tools.Scraping.Multithreading
         /// <param name="proxies">Proxies to use</param>
         public ThreadedWebClientWorker(int maxDownloadQueue = 250, bool depthFirst = false)
         {
+            logger.Debug("ThreadedWebClientWorker:\n    BadJobsRetry: {0}\n    BadProxyRetry: {1}\n    useDepthFirst: {2}", useDepthFirst, BadProxyRetry, useDepthFirst);
             this.client = new ThreadedWebClientDownloader(downloadThreads, maxDownloadQueue, depthFirst);
             this.BadJobsRetry = 4;
             this.BadProxyRetry = 2;
@@ -92,12 +97,14 @@ namespace Sogaard.Tools.Scraping.Multithreading
 
         public void SetThreads(int workThreads, int downloadThreads)
         {
+            logger.Trace("Setting thread Work: {0}, Download: {1}.", workThreads, downloadThreads);
             this.workThreads = workThreads;
             this.downloadThreads = downloadThreads;
         }
 
         public void SetRetrys(int badJobRetry, int badProxyRetry)
         {
+            logger.Trace("Setting retrys Jobs: {0}, Proxy: {1}.", badJobRetry, badProxyRetry);
             this.BadJobsRetry = badJobRetry;
             this.BadProxyRetry = badProxyRetry;
         }
@@ -129,6 +136,7 @@ namespace Sogaard.Tools.Scraping.Multithreading
         /// </summary>
         public void Run()
         {
+            logger.Debug("Starting work client.");
             this.client.SetThreads(this.downloadThreads);
             this.client.SetRetrys(this.BadJobsRetry, this.BadProxyRetry);
 
@@ -142,17 +150,20 @@ namespace Sogaard.Tools.Scraping.Multithreading
 
             if (this.proxies != null)
             {
+                logger.Trace("Sending {0} proxies to downloader.", this.proxies.Count);
                 this.client.AddProxies(proxies);
             }
             
             this.Threads = new Thread[workThreads];
             this.ThreadsDone = new bool[workThreads];
+            logger.Trace("Staring {0} work threads.", workThreads);
             for (int i = 0; i < workThreads; i++)
             {
                 Threads[i] = new Thread(ThreadDownloadLoader);
                 Threads[i].Start(i);
             }
 
+            logger.Trace("Starting download client.");
             client.Start();
             Thread.Sleep(100);
 
@@ -164,10 +175,12 @@ namespace Sogaard.Tools.Scraping.Multithreading
                     if (!thread.IsAlive)
                     {
                         doneThreads++;
+                        logger.Debug("Work thead is done with all it's work, {0} of {1} are idle", doneThreads, workThreads);
                     }
                 }
                 if (doneThreads == this.Threads.Length)
                 {
+                    logger.Debug("All work threads are done with their work, shutting down.");
                     break;
                 }
 
@@ -187,7 +200,7 @@ namespace Sogaard.Tools.Scraping.Multithreading
         private void ThreadDownloadLoader(object threadIndexObject)
         {
             int threadIndex = (int)threadIndexObject;
-            Console.WriteLine("Working Thread " + threadIndex + " started");
+            logger.Trace("Working Thread {0} started", threadIndex);
 
             while (!this.closeThreads)
             {
@@ -237,7 +250,10 @@ namespace Sogaard.Tools.Scraping.Multithreading
                             }
 
                             // Execute the job and add the list new jobs to the queue
+                            logger.Trace("Worker {0} is executing {1}.", threadIndex, job);
                             var newJobs = job.Execute();
+                            logger.Trace("Worker {0}'s execution of {1} gave {2} new jobs.", threadIndex, job, newJobs.Count);
+
                             for(int i = 0; i < newJobs.Count; i++)
                             {
                                 this.client.AddJob(newJobs[i]);
@@ -247,6 +263,7 @@ namespace Sogaard.Tools.Scraping.Multithreading
                         {
                             // There where an uncaught error in the job
                             // inform the job and do not requeue it.
+                            logger.Error(exp, "Worker {0} execution of job {1} failed.", threadIndex, job);
                             job.FailedExecute(exp);
                             if (WorkerThreadError != null)
                             {
@@ -257,7 +274,7 @@ namespace Sogaard.Tools.Scraping.Multithreading
                 }
                 catch (Exception exp)
                 {
-                    Console.WriteLine("Worker Thread error: " + exp.Message);
+                    logger.Error(exp, "Work thread {0} got an unkown error.", threadIndex);
                 }
             }
         }
@@ -266,11 +283,13 @@ namespace Sogaard.Tools.Scraping.Multithreading
         {
             if (!isPaused)
             {
+                logger.Info("Worker Pausing.");
                 this.isPaused = true;
                 this.client.Stop();
             }
             else
             {
+                logger.Info("Worker Resuming.");
                 this.isPaused = false;
                 this.client.Start();
             }
@@ -278,6 +297,7 @@ namespace Sogaard.Tools.Scraping.Multithreading
 
         public void Stop()
         {
+            logger.Debug("Stopping all threads.");
             this.closeThreads = true;
             this.client.ClearJobs();
         }

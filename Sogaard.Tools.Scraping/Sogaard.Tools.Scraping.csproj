@@ -30,6 +30,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="NLog">
+      <HintPath>..\..\UkData.Scraper\UkData.Scraper\packages\NLog.4.2.1\lib\net45\NLog.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Net.Http" />
@@ -40,6 +43,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="HolderBase.cs" />
     <Compile Include="Multithreading\BaseJobs\BaseThreadedWebClientJob.cs" />
     <Compile Include="Multithreading\BaseJobs\ExecuteOnlyJob.cs" />
     <Compile Include="Multithreading\BaseJobs\PostThreadedWebClientJob.cs" />
@@ -55,6 +59,9 @@
     <Compile Include="RegexHelper.cs" />
     <Compile Include="ScraperHelper.cs" />
     <Compile Include="TaskHelper.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
