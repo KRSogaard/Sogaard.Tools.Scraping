@@ -1,4 +1,5 @@
-﻿using System;
+﻿using NLog;
+using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading;
@@ -8,6 +9,8 @@ namespace Sogaard.Tools.Scraping.Multithreading.BaseJobs
 {
     public abstract class BaseThreadedWebClientJob : IThreadedWebClientJob
     {
+        private static Logger logger = LogManager.GetCurrentClassLogger();
+
         private string Url;
         private string Html;
 
@@ -35,11 +38,12 @@ namespace Sogaard.Tools.Scraping.Multithreading.BaseJobs
         {
             if (!this.CanDownload())
             {
+                logger.Debug("Can download returned false, stopping the download job.");
                 return;
             }
 
             ScraperHelper.SetOrigenToClient(this.Url, client);
-            Console.WriteLine("Downloading: " + this.Url);
+            logger.Trace("Downloading: " + this.Url);
             var result = await client.GetAsync(Url, cancelToken).ConfigureAwait(false);
             if (result.IsSuccessStatusCode)
             {
@@ -54,16 +58,16 @@ namespace Sogaard.Tools.Scraping.Multithreading.BaseJobs
             {
                 throw new HttpRequestException("HTML request was not successfull.");
             }
-
         }
 
         public virtual void FailedDownload(Exception exp)
         {
+            logger.Error("Download failed", exp);
         }
 
         public virtual void FailedExecute(Exception exp)
         {
-
+            logger.Error("Execute failed", exp);
         }
 
         protected virtual bool CanDownload()

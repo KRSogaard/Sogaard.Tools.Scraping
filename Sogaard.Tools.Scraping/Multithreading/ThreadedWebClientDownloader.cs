@@ -506,21 +506,21 @@ namespace Sogaard.Tools.Scraping.Multithreading
             // to be removed.
             if (proxy != null && this.useProxies)
             {
-                logger.Trace("Down voting the proxy {}." , proxy);
+                logger.Debug("Down voting the proxy {0}." , proxy);
                 if (!this.badProxy.ContainsKey(proxy))
                 {
-                    logger.Trace("First time down voting proxy {}.", proxy);
+                    logger.Debug("First time down voting proxy {0}.", proxy);
                     this.badProxy.GetOrAdd(proxy, 1);
                 }
                 else
                 {
                     this.badProxy[proxy]++;
-                    logger.Trace("Proxy {} have failied {} times now.", proxy, this.badProxy[proxy]);
+                    logger.Debug("Proxy {0} have failied {1} times now.", proxy, this.badProxy[proxy]);
                 }
 
                 if (this.badProxy[proxy] >= this.votesToRemoveProxy)
                 {
-                    logger.Trace("Proxy {} have failied {} or more times, removing it.", proxy, this.votesToRemoveProxy);
+                    logger.Debug("Proxy {0} have failied {1} or more times, removing it.", proxy, this.votesToRemoveProxy);
                     if (this.DownloaderBadProxyRemoved != null)
                     {
                         this.DownloaderBadProxyRemoved(this, threadIndex, proxy);
@@ -529,7 +529,7 @@ namespace Sogaard.Tools.Scraping.Multithreading
                     // the bad proxie
                     WebProxyHolder current = null;
                     // To ensure the proxie have not been removed and we start a never ending loop
-                    logger.Trace("Ensuring proxy {} have been removed from the queue.", proxy);
+                    logger.Trace("Ensuring proxy {0} have been removed from the queue.", proxy);
                     int i = this.proxies.Count; 
                     while (current != proxy && i >= 0)
                     {
