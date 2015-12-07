@@ -13,6 +13,7 @@ namespace Sogaard.Tools.Scraping.Multithreading.BaseJobs
 
         private string Url;
         private string Html;
+        private Dictionary<string, string> Headers;
 
         protected void SetUrl(string url)
         {
@@ -31,6 +32,15 @@ namespace Sogaard.Tools.Scraping.Multithreading.BaseJobs
         {
             this.Html = value;
         }
+
+        protected void AddHeader(string key, string value)
+        {
+            if (Headers == null)
+            {
+                this.Headers = new Dictionary<string, string>();
+            }
+            this.Headers.Add(key, value);
+        }
         
         public abstract List<IThreadedWebClientJob> Execute();
 
@@ -43,6 +53,14 @@ namespace Sogaard.Tools.Scraping.Multithreading.BaseJobs
             }
 
             ScraperHelper.SetOrigenToClient(this.Url, client);
+            if (this.Headers != null)
+            {
+                foreach (KeyValuePair<string, string> keyValuePair in Headers)
+                {
+                    client.DefaultRequestHeaders.Add(keyValuePair.Key, keyValuePair.Value);
+                }
+            }
+
             logger.Trace("Downloading: " + this.Url);
             var result = await client.GetAsync(Url, cancelToken).ConfigureAwait(false);
             if (result.IsSuccessStatusCode)
