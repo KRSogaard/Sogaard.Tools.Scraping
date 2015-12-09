@@ -36,6 +36,8 @@
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Net.Http" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Web.Extensions" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -43,7 +45,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="HolderBase.cs" />
+    <Compile Include="Holders\HolderBase.cs" />
+    <Compile Include="Holders\HolderXml.cs" />
+    <Compile Include="Holders\HolderJson.cs" />
+    <Compile Include="Holders\Serilization\SerializableDictionary.cs" />
+    <Compile Include="Holders\Serilization\SerializableList.cs" />
     <Compile Include="Multithreading\BaseJobs\BaseThreadedWebClientJob.cs" />
     <Compile Include="Multithreading\BaseJobs\ExecuteOnlyJob.cs" />
     <Compile Include="Multithreading\BaseJobs\PostThreadedWebClientJob.cs" />

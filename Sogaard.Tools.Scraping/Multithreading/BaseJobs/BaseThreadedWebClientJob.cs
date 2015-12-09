@@ -13,7 +13,7 @@ namespace Sogaard.Tools.Scraping.Multithreading.BaseJobs
 
         private string Url;
         private string Html;
-        private Dictionary<string, string> Headers;
+        protected Dictionary<string, string> headers;
 
         protected void SetUrl(string url)
         {
@@ -33,13 +33,13 @@ namespace Sogaard.Tools.Scraping.Multithreading.BaseJobs
             this.Html = value;
         }
 
-        protected void AddHeader(string key, string value)
+        protected virtual void AddHeader(string key, string value)
         {
-            if (Headers == null)
+            if (headers == null)
             {
-                this.Headers = new Dictionary<string, string>();
+                this.headers = new Dictionary<string, string>();
             }
-            this.Headers.Add(key, value);
+            this.headers.Add(key, value);
         }
         
         public abstract List<IThreadedWebClientJob> Execute();
@@ -53,9 +53,9 @@ namespace Sogaard.Tools.Scraping.Multithreading.BaseJobs
             }
 
             ScraperHelper.SetOrigenToClient(this.Url, client);
-            if (this.Headers != null)
+            if (this.headers != null)
             {
-                foreach (KeyValuePair<string, string> keyValuePair in Headers)
+                foreach (KeyValuePair<string, string> keyValuePair in headers)
                 {
                     client.DefaultRequestHeaders.Add(keyValuePair.Key, keyValuePair.Value);
                 }

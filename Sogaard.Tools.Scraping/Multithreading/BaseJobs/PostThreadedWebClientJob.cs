@@ -12,19 +12,8 @@ namespace Sogaard.Tools.Scraping.Multithreading.BaseJobs
     public abstract class PostThreadedWebClientJob : BaseThreadedWebClientJob
     {
         private HttpResponseHeaders responseHeaders;
-        private Dictionary<string,string> headers;
         private List<KeyValuePair<string, string>> formData;
         private string formString;
-        
-        public void AddHeader(string key, string value)
-        {
-            if (this.headers == null)
-            {
-                this.headers = new Dictionary<string, string>();
-            }
-
-            this.headers.Add(key, value);
-        }
 
         public HttpResponseHeaders GetResponseHeaders()
         {
