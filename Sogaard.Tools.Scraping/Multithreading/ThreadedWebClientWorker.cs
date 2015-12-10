@@ -121,6 +121,11 @@ namespace Sogaard.Tools.Scraping.Multithreading
             this.client.AddJob(Job);
         }
 
+        public ThreadedWebClientDownloader GetDownloader()
+        {
+            return this.client;
+        }
+
         /// <summary>
         /// Add proxies for the download to use
         /// You can use this method many times

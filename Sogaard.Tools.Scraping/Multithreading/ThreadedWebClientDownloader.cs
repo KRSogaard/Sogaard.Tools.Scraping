@@ -187,6 +187,8 @@ namespace Sogaard.Tools.Scraping.Multithreading
         {
             logger.Debug("Stopping all download threads.");
             this.stopThread = true;
+
+            //TODO: Wait untill all threads have stopped.
         }
 
         /// <summary>
@@ -607,9 +609,19 @@ namespace Sogaard.Tools.Scraping.Multithreading
                 this.jobsQueue = new ConcurrentQueue<IThreadedWebClientJob>();
         }
 
+        public bool IsRunning()
+        {
+            return !this.stopThread;
+        }
+
         internal List<WebProxyHolder> GetProxies()
         {
             return this.proxies.ToList();
+        }
+
+        internal int GetCurrentProxyCount()
+        {
+            return this.proxies.Count;
         }
     }
 }
