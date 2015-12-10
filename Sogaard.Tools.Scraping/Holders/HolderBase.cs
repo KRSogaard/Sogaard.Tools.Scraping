@@ -48,6 +48,7 @@ namespace Sogaard.Tools.Scraping.Holders
             }
         }
 
+        public abstract void Collet();
         public abstract void Write(List<T> items);
     }
 }

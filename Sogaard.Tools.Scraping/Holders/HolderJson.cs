@@ -35,5 +35,11 @@ namespace Sogaard.Tools.Scraping.Holders
             File.WriteAllText(name, json);
             count++;
         }
+
+
+        public override void Collet()
+        {
+            throw new System.NotImplementedException();
+        }
     }
 }
