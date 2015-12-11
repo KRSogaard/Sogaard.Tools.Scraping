@@ -20,7 +20,7 @@ namespace Sogaard.Tools.Scraping.Multithreading
         
         public ProxyLoader(ThreadedWebClientDownloader downloader, DirectoryInfo directory, int minimumProxies = 10, TimeSpan? scanInterval = null)
         {
-            this.ScanInterval = scanInterval ?? new TimeSpan(0, 0, 1);
+            this.ScanInterval = scanInterval ?? new TimeSpan(0, 1, 0);
             this.executeScan = true;
             this.minimumProxies = minimumProxies;
             this.downloader = downloader;
@@ -60,7 +60,6 @@ namespace Sogaard.Tools.Scraping.Multithreading
 
         public void RunAsync()
         {
-            Thread.Sleep(this.ScanInterval);
             logger.Debug("Checking \"{0}\" for new proxy files.", directory.FullName);
             if(!executeScan)
                 return;
@@ -97,6 +96,7 @@ namespace Sogaard.Tools.Scraping.Multithreading
                     if (added > 0)
                     {
                         logger.Debug("Deleting \"{0}\" the {1} proxies have been loaded.", file.Name, added);
+                        File.Delete(file.FullName);
                     }
                     else
                     {
@@ -114,6 +114,8 @@ namespace Sogaard.Tools.Scraping.Multithreading
                 logger.Info("Downloader is stopped, and enough proxies have been added to restart the downloader.");
                 this.downloader.Start();
             }
+
+            Thread.Sleep(this.ScanInterval);
             RunAsync();
         }
 
