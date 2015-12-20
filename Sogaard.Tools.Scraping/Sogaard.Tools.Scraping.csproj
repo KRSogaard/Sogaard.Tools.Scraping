@@ -55,6 +55,7 @@
     <Compile Include="Multithreading\BaseJobs\PostThreadedWebClientJob.cs" />
     <Compile Include="Multithreading\IThreadedWebClientJob.cs" />
     <Compile Include="Multithreading\ProxyLoader.cs" />
+    <Compile Include="Multithreading\TaskTypes\IHttpClientHandlerTask.cs" />
     <Compile Include="Multithreading\TaskTypes\IThreadedWebClientLongJob.cs" />
     <Compile Include="Multithreading\TaskTypes\ITypedTask.cs" />
     <Compile Include="Multithreading\TaskTypes\SpanTask.cs" />

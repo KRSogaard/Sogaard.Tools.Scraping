@@ -283,61 +283,69 @@ namespace Sogaard.Tools.Scraping.Multithreading
                 WebProxyHolder proxy;
                 try
                 {
-                    WebProxy webProxy = this.HandleAddProxy(out proxy);
-                    using (HttpClient client = new HttpClient(new HttpClientHandler()
+                    // Dequeue a job.
+                    IThreadedWebClientJob job = this.Dequeue();
+                    if (job != null)
                     {
-                        UseCookies = false,
-                        Proxy = webProxy,
-                        UseProxy = this.useProxies,
-                        // For Fiddler debugging
-                        //Proxy = new WebProxy("http://127.0.0.1:8888"),
-                        //UseProxy = true,
-                        AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
-                    }))
-                    {
-                        // Add default headers to the client to simulate 
-                        // a real browser
-                        ScraperHelper.AddHeadersToClient(client);
-
-                        // Dequeue a job.
-                        IThreadedWebClientJob job = this.Dequeue();
-                        if (job != null)
+                        logger.Trace("Downloader {0} got a new job {1}", threadIndex, job);
+                        lock (this.jobsInProcessLocker)
                         {
-                            logger.Trace("Downloader {0} got a new job {1}", threadIndex, job);
-                            lock (this.jobsInProcessLocker)
+                            this.jobsInProcess++;
+                            if (this.JobProcessingChanged != null)
                             {
-                                this.jobsInProcess++;
-                                if (this.JobProcessingChanged != null)
-                                {
-                                    this.JobProcessingChanged(this, this.jobsInProcess);
-                                }
+                                this.JobProcessingChanged(this, this.jobsInProcess);
+                            }
+                        }
+
+                        if (this.DownloaderThreadJobChanged != null)
+                        {
+                            this.DownloaderThreadJobChanged(this, threadIndex, job);
+                        }
+
+                        WebProxy webProxy = this.HandleAddProxy(out proxy);
+                        try
+                        {
+                            bool run = true;
+                            if (job is ITypedTask)
+                            {
+                                logger.Trace("Downloader {0}'s job {1} requires verification.", threadIndex, job);
+                                run = ((ITypedTask)job).Verify();
                             }
 
-                            if (this.DownloaderThreadJobChanged != null)
+                            if (run)
                             {
-                                this.DownloaderThreadJobChanged(this, threadIndex, job);
-                            }
-
-                            try
-                            {
-                                bool run = true;
-                                if (job is ITypedTask)
+                                var HttpClientHandler = new HttpClientHandler()
                                 {
-                                    logger.Trace("Downloader {0}'s job {1} requires verification.", threadIndex, job);
-                                    run = ((ITypedTask)job).Verify();
+                                    UseCookies = false,
+                                    //Proxy = webProxy,
+                                    //UseProxy = this.useProxies,
+                                    // For Fiddler debugging
+                                    Proxy = new WebProxy("http://127.0.0.1:8888"),
+                                    UseProxy = true,
+                                    AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
+                                };
+                                if (job is IHttpClientHandlerTask)
+                                {
+                                    logger.Trace("Downloader {0}'s job {1} have custom HttpClient.", threadIndex, job);
+                                    HttpClientHandler = ((IHttpClientHandlerTask) job).GetHttpClient(webProxy);
                                 }
-
-                                if (run)
+                                using (HttpClient client = new HttpClient(HttpClientHandler))
                                 {
+                                    // Add default headers to the client to simulate 
+                                    // a real browser
+                                    ScraperHelper.AddHeadersToClient(client);
+
                                     logger.Trace("Downloader {0} is running job {1}.", threadIndex, job);
                                     CancellationTokenSource cancelToken = new CancellationTokenSource();
                                     var timelimit = new TimeSpan(0, 0, 30);
                                     // Some jobs might requere a bigger timelimit
                                     if (job is IThreadedWebClientLongJob)
                                     {
-                                        logger.Debug("Fetching timelimit for downloader {0}'s job {1}.", threadIndex, job);
-                                        timelimit = ((IThreadedWebClientLongJob)job).GetTimeOut();
-                                        logger.Debug("Downloader {0}'s job {1} have set a custome time limit to {2}.", threadIndex, job, timelimit);
+                                        logger.Debug("Fetching timelimit for downloader {0}'s job {1}.", threadIndex,
+                                            job);
+                                        timelimit = ((IThreadedWebClientLongJob) job).GetTimeOut();
+                                        logger.Debug("Downloader {0}'s job {1} have set a custome time limit to {2}.",
+                                            threadIndex, job, timelimit);
                                     }
 
                                     cancelToken.CancelAfter(timelimit);
@@ -361,57 +369,57 @@ namespace Sogaard.Tools.Scraping.Multithreading
                                         }
                                     }
                                 }
-                                else
-                                {
-                                    logger.Trace("Downloader {0}'s job {1} did not verify, reenqueueing the job.", threadIndex, job);
-                                    // Requery the job
-                                    this.Enqueue(job);
-                                    Thread.Sleep(10);
-                                }
                             }
-                            // WebException may be a proxy error
-                            catch (HttpRequestException exp)
+                            else
                             {
-                                logger.Warn(exp, "Got web exception while executing downloader {0}'s job {1}.", threadIndex, job);
-                                // Handle bad proxy voting
-                                this.HandleBadProxy(threadIndex, proxy);
-                                // Requeue the job
-                                this.HandleBadJob(job, threadIndex);
-                            }
-                            // Uncaught error
-                            catch (Exception exp)
-                            {
-                                logger.Error(exp, "Got unknown exception while executing downloader {0}'s job {1}.", threadIndex, job);
-                                try
-                                {
-                                    logger.Trace(exp, "Downloader {0} is running failed download for job {1}: {2}", threadIndex, job, exp.Message);
-                                    job.FailedDownload(exp);
-                                }
-                                catch (Exception exp2)
-                                {
-                                    // Error here, nothing we can do
-                                }
-                                this.HandleBadJob(job, threadIndex);
-                            }
-
-                            lock (this.jobsInProcessLocker)
-                            {
-                                this.jobsInProcess--;
-                                if (this.JobProcessingChanged != null)
-                                {
-                                    this.JobProcessingChanged(this, this.jobsInProcess);
-                                }
+                                logger.Trace("Downloader {0}'s job {1} did not verify, reenqueueing the job.", threadIndex, job);
+                                // Requery the job
+                                this.Enqueue(job);
+                                Thread.Sleep(10);
                             }
                         }
-                        else
+                        // WebException may be a proxy error
+                        catch (HttpRequestException exp)
                         {
-                            // Currently no jobs to do
-                            if (this.DownloaderThreadJobChanged != null)
-                            {
-                                this.DownloaderThreadJobChanged(this, threadIndex, null);
-                            }
-                            await Task.Delay(100);
+                            logger.Warn(exp, "Got web exception while executing downloader {0}'s job {1}.", threadIndex, job);
+                            // Handle bad proxy voting
+                            this.HandleBadProxy(threadIndex, proxy);
+                            // Requeue the job
+                            this.HandleBadJob(job, threadIndex);
                         }
+                        // Uncaught error
+                        catch (Exception exp)
+                        {
+                            logger.Error(exp, "Got unknown exception while executing downloader {0}'s job {1}.", threadIndex, job);
+                            try
+                            {
+                                logger.Trace(exp, "Downloader {0} is running failed download for job {1}: {2}", threadIndex, job, exp.Message);
+                                job.FailedDownload(exp);
+                            }
+                            catch (Exception exp2)
+                            {
+                                // Error here, nothing we can do
+                            }
+                            this.HandleBadJob(job, threadIndex);
+                        }
+
+                        lock (this.jobsInProcessLocker)
+                        {
+                            this.jobsInProcess--;
+                            if (this.JobProcessingChanged != null)
+                            {
+                                this.JobProcessingChanged(this, this.jobsInProcess);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // Currently no jobs to do
+                        if (this.DownloaderThreadJobChanged != null)
+                        {
+                            this.DownloaderThreadJobChanged(this, threadIndex, null);
+                        }
+                        await Task.Delay(100);
                     }
                 }
                 catch (HttpRequestException exp)
