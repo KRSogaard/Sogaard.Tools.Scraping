@@ -317,11 +317,11 @@ namespace Sogaard.Tools.Scraping.Multithreading
                                 var HttpClientHandler = new HttpClientHandler()
                                 {
                                     UseCookies = false,
-                                    //Proxy = webProxy,
-                                    //UseProxy = this.useProxies,
+                                    Proxy = webProxy,
+                                    UseProxy = this.useProxies,
                                     // For Fiddler debugging
-                                    Proxy = new WebProxy("http://127.0.0.1:8888"),
-                                    UseProxy = true,
+                                    //Proxy = new WebProxy("http://127.0.0.1:8888"),
+                                    //UseProxy = true,
                                     AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
                                 };
                                 if (job is IHttpClientHandlerTask)

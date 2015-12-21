@@ -67,6 +67,7 @@
     <Compile Include="RegexHelper.cs" />
     <Compile Include="ScraperHelper.cs" />
     <Compile Include="TaskHelper.cs" />
+    <Compile Include="ToolsHelper.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
