@@ -206,6 +206,7 @@ namespace Sogaard.Tools.Scraping.Multithreading
         {
             int threadIndex = (int)threadIndexObject;
             logger.Trace("Working Thread {0} started", threadIndex);
+            bool canClose = false;
 
             while (!this.closeThreads)
             {
@@ -218,6 +219,13 @@ namespace Sogaard.Tools.Scraping.Multithreading
                     // no work.
                     if (job == null && this.client.JobsInQueue() == 0)
                     {
+                        // Test to stop it from exiting to early
+                        if (!canClose)
+                        {
+                            canClose = true;
+                            Thread.Sleep(100);
+                            continue;
+                        }
                         this.ThreadsDone[threadIndex] = true;
                         if (this.WorkerThreadStatusChanged != null)
                             this.WorkerThreadStatusChanged(this, threadIndex, null);
@@ -225,6 +233,7 @@ namespace Sogaard.Tools.Scraping.Multithreading
                         Thread.Sleep(100);
                         continue;
                     }
+                    canClose = false;
 
                     // We did not get a job, but there are jobs in the worker or downloader
                     // queue
