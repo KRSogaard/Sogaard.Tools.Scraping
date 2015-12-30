@@ -13,10 +13,10 @@ namespace Sogaard.Tools.Scraping
     {
         public static void AddHeadersToClient(HttpClient client)
         {
-            client.DefaultRequestHeaders.Add("Accept", "*/*");
+            client.DefaultRequestHeaders.Add("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
             client.DefaultRequestHeaders.Add("Accept-Encoding", "gzip, deflate");
-            client.DefaultRequestHeaders.Add("Accept-Language", "da-DK,da;q=0.8,en-US;q=0.6,en;q=0.4");
-            client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/40.0.2214.115 Safari/537.36");
+            client.DefaultRequestHeaders.Add("Accept-Language", "en-US,en;q=0.5");
+            client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 6.1; rv:38.0) Gecko/20100101 Firefox/38.0");
             client.DefaultRequestHeaders.Add("AcceptCharset", "utf-8");
         }
         public static void SetOrigenToClient(string url, HttpClient client)

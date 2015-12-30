@@ -47,6 +47,7 @@ namespace Sogaard.Tools.Scraping.Multithreading.BaseJobs
         {
             var uri = new Uri(this.GetUrl());
             client.BaseAddress = this.GetUrl().Contains("https:") ? new Uri("https://" + uri.Host) : new Uri("http://" + uri.Host);
+            ScraperHelper.SetOrigenToClient(this.GetUrl(), client);
 
             var message = new HttpRequestMessage(HttpMethod.Post, uri.LocalPath);
             if (this.headers != null)

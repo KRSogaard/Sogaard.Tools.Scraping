@@ -342,10 +342,6 @@ namespace Sogaard.Tools.Scraping.Multithreading
 
         private void OnDownloaderNoGoodProxyLeft(object sender)
         {
-            // The webclient is not going to do any more work,
-            // so we have to shut down.
-            closeThreads = true;
-
             if (this.DownloaderNoGoodProxyLeft != null)
             {
                 this.DownloaderNoGoodProxyLeft(sender);

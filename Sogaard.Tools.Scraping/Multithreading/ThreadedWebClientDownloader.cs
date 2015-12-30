@@ -109,6 +109,11 @@ namespace Sogaard.Tools.Scraping.Multithreading
         /// </summary>
         private bool waitingForEmpty;
 
+        /// <summary>
+        /// Kill the download if there are no proxies left
+        /// </summary>
+        private bool dieOnProxiesLeft;
+
         #region Events
         public event DownloaderThreadJobChangedEvent DownloaderThreadJobChanged;
         public event DownloaderThreadStatusEvent DownloaderThreadStatus;
@@ -133,6 +138,7 @@ namespace Sogaard.Tools.Scraping.Multithreading
             this.numberOfThreads = numberOfThreads;
             this.maxDoneQueue = maxDoneQueue;
             this.waitingForEmpty = false;
+            this.dieOnProxiesLeft = true;
 
             this.doneJobQueue = new ConcurrentQueue<IThreadedWebClientJob>();
             this.proxies = new ConcurrentQueue<WebProxyHolder>();
@@ -206,6 +212,19 @@ namespace Sogaard.Tools.Scraping.Multithreading
         }
 
         /// <summary>
+        /// Set the download to require proxies
+        /// </summary>
+        public void ForceProxiesOnly()
+        {
+            this.useProxies = true;
+        }
+
+        public void DieOnNoProxies(bool value)
+        {
+            this.dieOnProxiesLeft = value;
+        }
+
+        /// <summary>
         /// Add a job to be executed
         /// </summary>
         public void AddJob(IThreadedWebClientJob job)
@@ -262,7 +281,7 @@ namespace Sogaard.Tools.Scraping.Multithreading
                 {
                     this.DownloaderThreadJobChanged(this, threadIndex, null);
                     this.waitingForEmpty = true;
-                    Thread.Sleep(50);
+                    await Task.Delay(50);
                     continue;
                 }
                 if (this.waitingForEmpty)
@@ -273,7 +292,7 @@ namespace Sogaard.Tools.Scraping.Multithreading
                     {
                         this.waitingForEmpty = false;
                     }
-                    Thread.Sleep(50);
+                    await Task.Delay(50);
                     continue;
                 }
 
@@ -281,10 +300,11 @@ namespace Sogaard.Tools.Scraping.Multithreading
                 // returns false, do we have to stop work, and we
                 // use proxies, but there are no proxies left to work with.
                 WebProxyHolder proxy;
+                IThreadedWebClientJob job;
                 try
                 {
                     // Dequeue a job.
-                    IThreadedWebClientJob job = this.Dequeue();
+                    job = this.Dequeue();
                     if (job != null)
                     {
                         logger.Trace("Downloader {0} got a new job {1}", threadIndex, job);
@@ -303,6 +323,35 @@ namespace Sogaard.Tools.Scraping.Multithreading
                         }
 
                         WebProxy webProxy = this.HandleAddProxy(out proxy);
+                        if (webProxy == null && this.useProxies)
+                        {
+                            if (this.dieOnProxiesLeft)
+                            {
+                                logger.Error("Download {0} was unable to find any proxies, shutting down.", threadIndex);
+                                // No proxies to use, and we have to use proxies, kill all downloads.
+                                this.stopThread = true;
+                                this.jobsInProcess = 0; // Ensure worker is not stuck
+                                return;
+                            }
+                            else
+                            {
+                                logger.Trace("Download {0} was unable to find any proxies, requeueing the job.", threadIndex);
+                                // We just keep running untill we get proxies again.
+                                // Requeue the job
+                                this.Enqueue(job);
+                                // Count down the working jobs
+                                lock (this.jobsInProcessLocker)
+                                {
+                                    this.jobsInProcess--;
+                                    if (this.JobProcessingChanged != null)
+                                    {
+                                        this.JobProcessingChanged(this, this.jobsInProcess);
+                                    }
+                                }
+                                await Task.Delay(50);
+                                continue;
+                            }
+                        }
                         try
                         {
                             bool run = true;
@@ -375,7 +424,7 @@ namespace Sogaard.Tools.Scraping.Multithreading
                                 logger.Trace("Downloader {0}'s job {1} did not verify, reenqueueing the job.", threadIndex, job);
                                 // Requery the job
                                 this.Enqueue(job);
-                                Thread.Sleep(10);
+                                await Task.Delay(10);
                             }
                         }
                         // WebException may be a proxy error
@@ -480,19 +529,24 @@ namespace Sogaard.Tools.Scraping.Multithreading
             {
                 if (this.NoGoodProxyEventFired)
                 {
-                    logger.Debug("No good proxies already fired, shutting down thread with exception.");
-                    throw new WebException("No Good Proxies");
+                    logger.Debug("No good proxies already fired.");
+                    // No Good proxies, user will ensure it is handeled correctly.
+                    return null;
                 }
 
                 // Bad no good proxies left
                 logger.Debug("No good proxies found, and it is the first time.");
                 this.NoGoodProxyEventFired = true;
-                this.stopThread = true;
+                if (this.dieOnProxiesLeft)
+                {
+                    this.stopThread = true;
+                }
                 if (this.DownloaderNoGoodProxyLeft != null)
                 {
                     this.DownloaderNoGoodProxyLeft(this);
                 }
-                throw new WebException("No Good Proxies");
+                // No Good proxies, user will ensure it is handeled correctly.
+                return null;
             }
 
             WebProxy p = null;
@@ -503,7 +557,8 @@ namespace Sogaard.Tools.Scraping.Multithreading
                 return new WebProxy(proxy.Ip, proxy.Port);
             }
             logger.Error("Was unable to dequeue a proxy.");
-            throw new WebException("No Good Proxies");
+            // No Good proxies, user will ensure it is handeled correctly.
+            return null;
         }
 
         /// <summary>
