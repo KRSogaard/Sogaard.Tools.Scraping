@@ -73,6 +73,7 @@ namespace Sogaard.Tools.Scraping.Multithreading
         public event JobProcessingEvent DownloaderJobProcessingChanged;
         public event JobInQueueEvent DownloaderJobInQueueChanged;
         public event JobDoneInQueueEvent DownloaderJobDoneInQueueChanged;
+        public event ProxyAdded ProxyAdded;
         #endregion
 
         /// <summary>
@@ -152,6 +153,7 @@ namespace Sogaard.Tools.Scraping.Multithreading
             this.client.JobProcessingChanged += OnDownloaderJobProcessingChanged;
             this.client.JobInQueueChanged += OnDownloaderJobInQueueChanged;
             this.client.JobDoneInQueueChanged += OnDownloaderJobDoneInQueueChanged;
+            this.client.ProxyAdded += ClientOnProxyAdded;
 
             if (this.proxies != null)
             {
@@ -369,6 +371,14 @@ namespace Sogaard.Tools.Scraping.Multithreading
             if (this.DownloaderJobProcessingChanged != null)
             {
                 this.DownloaderJobProcessingChanged(sender, currentProcessing);
+            }
+        }
+
+        private void ClientOnProxyAdded(object sender, WebProxyHolder proxy)
+        {
+            if (this.ProxyAdded != null)
+            {
+                this.ProxyAdded(sender, proxy);
             }
         }
         #endregion

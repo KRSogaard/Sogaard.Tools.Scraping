@@ -20,7 +20,7 @@ namespace Sogaard.Tools.Scraping.Multithreading
         
         public ProxyLoader(ThreadedWebClientDownloader downloader, DirectoryInfo directory, int minimumProxies = 10, TimeSpan? scanInterval = null)
         {
-            this.ScanInterval = scanInterval ?? new TimeSpan(0, 1, 0);
+            this.ScanInterval = scanInterval ?? new TimeSpan(0, 0, 10);
             this.executeScan = true;
             this.minimumProxies = minimumProxies;
             this.downloader = downloader;

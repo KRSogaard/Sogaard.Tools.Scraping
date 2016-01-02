@@ -14,6 +14,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using System.Windows.Threading;
 using Sogaard.Scraper.HoursGuid.GUI.ViewModels;
 
 namespace Sogaard.Tools.Scraping.Multithreading.GUI
@@ -51,11 +52,6 @@ namespace Sogaard.Tools.Scraping.Multithreading.GUI
             this.worker = worker;
         }
 
-        public void AddProxies(List<WebProxyHolder> proxies)
-        {
-            this.worker.AddProxies(proxies);
-        }
-
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
             for (int i = 0; i < viewModel.WorkThreadCount; i++)
@@ -86,6 +82,7 @@ namespace Sogaard.Tools.Scraping.Multithreading.GUI
             worker.DownloaderJobInQueueChanged += OnDownloaderJobInQueueChanged;
             worker.DownloaderJobProcessingChanged += OnDownloaderJobProcessingChanged;
             worker.DownloaderBadProxyRemoved += OnDownloaderBadProxyRemoved;
+            worker.ProxyAdded += WorkerOnProxyAdded;
         }
 
         #region Events and viewmodel update
@@ -145,6 +142,15 @@ namespace Sogaard.Tools.Scraping.Multithreading.GUI
         private void OnDownloaderBadProxyRemoved(object sender, int threadId, WebProxyHolder proxy)
         {
             this.SetRemovedProxy(proxy);
+        }
+
+        private void WorkerOnProxyAdded(object sender, WebProxyHolder proxy)
+        {
+            Application.Current.Dispatcher.BeginInvoke(
+                DispatcherPriority.Background,
+                new Action(() =>
+                    this.viewModel.Proxies.Add(new ProxyViewModel(proxy))))
+                ;
         }
 
         private void SetDownloaderJobProcessing(int value)

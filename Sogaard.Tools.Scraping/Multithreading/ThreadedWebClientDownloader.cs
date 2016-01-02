@@ -22,6 +22,7 @@ namespace Sogaard.Tools.Scraping.Multithreading
     public delegate void JobProcessingEvent(object sender, int currentProcessing);
     public delegate void JobInQueueEvent(object sender, int jobs);
     public delegate void JobDoneInQueueEvent(object sender, int jobs);
+    public delegate void ProxyAdded(object sender, WebProxyHolder proxy);
 
     /// <summary>
     /// This is a job based multi threaded web client
@@ -124,6 +125,7 @@ namespace Sogaard.Tools.Scraping.Multithreading
         public event JobProcessingEvent JobProcessingChanged;
         public event JobInQueueEvent JobInQueueChanged;
         public event JobDoneInQueueEvent JobDoneInQueueChanged;
+        public event ProxyAdded ProxyAdded;
         #endregion
 
         /// <summary>
@@ -206,6 +208,10 @@ namespace Sogaard.Tools.Scraping.Multithreading
             foreach (var p in proxies)
             {
                 logger.Trace("Got new proxy {0}", p);
+                if (this.ProxyAdded != null)
+                {
+                    this.ProxyAdded(this, p);
+                }
                 this.proxies.Enqueue(p);
             }
             this.useProxies = this.proxies.Count > 0;
@@ -304,6 +310,7 @@ namespace Sogaard.Tools.Scraping.Multithreading
                 try
                 {
                     // Dequeue a job.
+                    //logger.Trace("Downloader {0} Trying to get a new job.", threadIndex);
                     job = this.Dequeue();
                     if (job != null)
                     {
