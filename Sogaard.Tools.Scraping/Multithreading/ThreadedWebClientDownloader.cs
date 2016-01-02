@@ -359,6 +359,12 @@ namespace Sogaard.Tools.Scraping.Multithreading
                                 continue;
                             }
                         }
+
+                        if (webProxy != null && this.useProxies)
+                        {
+                            logger.Trace("Downloader {0}, got proxy {1}:{2}", threadIndex, webProxy.Address.Host, webProxy.Address.Port);
+                        }
+
                         try
                         {
                             bool run = true;
