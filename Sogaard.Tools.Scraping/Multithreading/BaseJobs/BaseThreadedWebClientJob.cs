@@ -68,13 +68,14 @@ namespace Sogaard.Tools.Scraping.Multithreading.BaseJobs
                 var html = await result.Content.ReadAsStringAsync().WithCancellation(cancelToken).ConfigureAwait(false);
                 if (!this.ValidateHtml(html))
                 {
+                    logger.Warn("Failed HTML verification");
                     throw new HttpRequestException("HTML returned was not verified.");
                 }
                 this.Html = html;
             }
             else
             {
-                throw new HttpRequestException("HTML request was not successfull.");
+                throw new HttpRequestException(string.Format("HTML request was not successfull. Status Code: {0} ", result.StatusCode));
             }
         }
 
