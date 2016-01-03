@@ -60,63 +60,62 @@ namespace Sogaard.Tools.Scraping.Multithreading
 
         public void RunAsync()
         {
-            logger.Debug("Checking \"{0}\" for new proxy files.", directory.FullName);
-            if(!executeScan)
-                return;
-
-            var files = directory.GetFiles();
-            logger.Debug("Found {0} files.", files.Length);
-            foreach (var file in files)
+            while (executeScan)
             {
-                try
+                logger.Debug("Checking \"{0}\" for new proxy files.", directory.FullName);
+                var files = directory.GetFiles();
+                logger.Debug("Found {0} files.", files.Length);
+                foreach (var file in files)
                 {
-                    logger.Info("Loading proxy file \"{0}\".", file.Name);
-                    var lines = File.ReadAllLines(file.FullName);
-                    int added = 0;
-                    foreach (var line in lines)
+                    try
                     {
-                        try
+                        logger.Info("Loading proxy file \"{0}\".", file.Name);
+                        var lines = File.ReadAllLines(file.FullName);
+                        int added = 0;
+                        foreach (var line in lines)
                         {
-                            var split = line.Split(new []{ ',', ':'});
-                            var proxyHolder = new WebProxyHolder();
-                            proxyHolder.Ip = split[0];
-                            proxyHolder.Port = int.Parse(split[1]);
-                            if (split.Length >= 3)
+                            try
                             {
-                                proxyHolder.Country = split[2];
+                                var split = line.Split(new []{ ',', ':'});
+                                var proxyHolder = new WebProxyHolder();
+                                proxyHolder.Ip = split[0];
+                                proxyHolder.Port = int.Parse(split[1]);
+                                if (split.Length >= 3)
+                                {
+                                    proxyHolder.Country = split[2];
+                                }
+                                this.downloader.AddProxies(new List<WebProxyHolder>() {proxyHolder});
+                                added++;
                             }
-                            this.downloader.AddProxies(new List<WebProxyHolder>() {proxyHolder});
-                            added++;
+                            catch (Exception exp)
+                            {
+                                logger.Error(exp, "Failed to load proxy line \"{0}\".", line);
+                            }
                         }
-                        catch (Exception exp)
+                        if (added > 0)
                         {
-                            logger.Error(exp, "Failed to load proxy line \"{0}\".", line);
+                            logger.Debug("Deleting \"{0}\" the {1} proxies have been loaded.", file.Name, added);
+                            File.Delete(file.FullName);
+                        }
+                        else
+                        {
+                            logger.Debug("Did not find any proxies in \"{0}\".", file.Name);
                         }
                     }
-                    if (added > 0)
+                    catch (Exception exp)
                     {
-                        logger.Debug("Deleting \"{0}\" the {1} proxies have been loaded.", file.Name, added);
-                        File.Delete(file.FullName);
-                    }
-                    else
-                    {
-                        logger.Debug("Did not find any proxies in \"{0}\".", file.Name);
+                        logger.Error(exp, "Failed to load proxies from \"{0}\".", file.Name);
                     }
                 }
-                catch (Exception exp)
+
+                if (!this.downloader.IsRunning() && this.downloader.GetCurrentProxyCount() > this.minimumProxies)
                 {
-                    logger.Error(exp, "Failed to load proxies from \"{0}\".", file.Name);
+                    logger.Info("Downloader is stopped, and enough proxies have been added to restart the downloader.");
+                    this.downloader.Start();
                 }
-            }
 
-            if (!this.downloader.IsRunning() && this.downloader.GetCurrentProxyCount() > this.minimumProxies)
-            {
-                logger.Info("Downloader is stopped, and enough proxies have been added to restart the downloader.");
-                this.downloader.Start();
+                Thread.Sleep(this.ScanInterval);
             }
-
-            Thread.Sleep(this.ScanInterval);
-            RunAsync();
         }
 
     }
